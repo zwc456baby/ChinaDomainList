@@ -97,4 +97,4 @@ if __name__ == '__main__':
     log('run china host list server')
     host_utils.initDb()
     runScheduler()
-    app.run(debug=True, host="0.0.0.0", port=8120)
+    app.run(debug=False, host="0.0.0.0", port=8120)
