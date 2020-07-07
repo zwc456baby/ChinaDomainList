@@ -4,7 +4,7 @@ import socket
 
 import redis
 import requests
-
+import time
 from utils import log
 
 _pool = redis.ConnectionPool(host='127.0.0.1', port=8888, decode_responses=True)
@@ -12,6 +12,7 @@ redis_db = redis.Redis(connection_pool=_pool)
 
 max_ip_length = 4
 white_host_hashname = 'gfw_white_hostname_hash'
+white_host_del_tmp_format = 'gfw_white_domain_del_tmp_{}'
 white_ip_hashname_format = 'gfw_white_ip_hash_{}'
 redis_hash_key_max_length = 255
 whitelist_filename = 'whitelist.txt'
@@ -93,7 +94,7 @@ def checkHost(_hostname):
         print('input host:{}'.format(hostname))
         db_host_ip = "" if is_test else redis_db.hget(white_host_hashname, hostname)
         if db_host_ip is not None and str(db_host_ip) != "":
-            redis_db.hdel(white_host_hashname, hostname)
+            _tryDeleteDomain(hostname)
             return 1004
         return 1003
 
@@ -114,14 +115,36 @@ def checkAllHostIp():
             # 解析不到 ip 地址
             # 说明这个 域名已经无法正常解析
             # 此时需要移除
-            redis_db.hdel(white_host_hashname, hostname)
+            _tryDeleteDomain(hostname)
             continue
         if not ischina(host_ip):
             # 之前解析的ip位于国内
             # 而目前最新的解析显示ip位于国外，则移除这个域名
-            redis_db.hdel(white_host_hashname, hostname)
+            _tryDeleteDomain(hostname)
         else:
             redis_db.hset(white_host_hashname, hostname, host_ip)
+
+
+def _tryDeleteDomain(domain):
+    """
+    尝试从 白名单列表移除一个域名
+    注意：
+        域名只有失效 一天才会被移除
+        这是为了网站可能因为某些原因暂时无法解析到正确IP
+    :param domain:
+    :return:
+    """
+    delete_tmp_time = redis_db.get(white_host_del_tmp_format.format(domain))
+    if delete_tmp_time is None or delete_tmp_time == "":
+        redis_db.setex(white_host_del_tmp_format.format(domain), 60 * 60 * 72,
+                       int(time.time()))
+    else:
+        try:
+            db_time = int(delete_tmp_time)
+            if db_time < (int(time.time()) - 60 * 60 * 24):
+                redis_db.hdel(white_host_hashname, domain)
+        except ValueError:
+            redis_db.hdel(white_host_hashname, domain)
 
 
 def getHostnameToFile():
