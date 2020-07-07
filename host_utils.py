@@ -14,7 +14,7 @@ max_ip_length = 4
 white_host_hashname = 'gfw_white_hostname_hash'
 white_host_del_tmp_format = 'gfw_white_domain_del_tmp_{}'
 white_ip_hashname_format = 'gfw_white_ip_hash_{}'
-redis_hash_key_max_length = 255
+redis_hash_key_max_length = 128
 whitelist_filename = 'whitelist.txt'
 
 """
