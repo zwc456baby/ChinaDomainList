@@ -7,6 +7,12 @@
 
 **白名单列表可由所有人进行维护**
 
+---
+
+CN 白名单域名列表：
+
+[https://github.com/zwc456baby/ChinaDomainList/raw/master/whitelist.txt](https://github.com/zwc456baby/ChinaDomainList/raw/master/whitelist.txt)
+
 ## 说明
 
 本程序会将提交的域名暂存到数据库中
