@@ -1,2 +1,0 @@
-如果需要从外部文件读取域名数据到 redis
-则删除此文件，并执行: python host_utils.py

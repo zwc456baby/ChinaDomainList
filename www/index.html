@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+  <title>白名单域名提交工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    body,
+    html {
+      /* height: 100%; */
+      width: 100%;
+      font-size: 14px;
+      font-family: 'Microsoft YaHei', 'Microsoft JhengHei', 'SimSun', Arial, Helvetica, sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      /* height: 100%; */
+      /* margin: 0 auto; */
+      padding-top: 160px;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+
+    .txt {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 10px auto 0;
+      width: 50%;
+      min-width: 300px;
+      padding-right: 100px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .txt .switch {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      right: 0;
+      font-size: 14px;
+      font-weight: normal
+    }
+
+    .form {
+      width: 50%;
+      margin: 10px auto 0;
+      display: flex;
+      min-width: 300px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .input-box {
+      border: 1px solid #eee;
+      border-radius: 22px;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .input-box .input {
+      height: 40px;
+      line-height: 40px;
+      display: inline-block;
+      border: 0;
+      box-sizing: border-box;
+      outline: none;
+      flex: 1;
+      width: 100%;
+      background-color: transparent;
+    }
+
+    .input-box .serach-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+    }
+
+    .top {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: #fff;
+      z-index: 1;
+      padding-bottom: 10px;
+      user-select: none;
+    }
+
+    .info-list {
+      margin: 10px auto 0;
+      width: 100%;
+      height: 100%;
+      border: 1px solid #eee;
+      box-sizing: border-box;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .scroll-btn {
+      position: fixed;
+      bottom: 40px;
+      right: 10px;
+      z-index: 1;
+      width: 40px;
+      padding: 10px;
+    }
+
+    .backTop,
+    .toBottom {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      display: inline-block;
+      cursor: pointer;
+      background-color: #fff;
+      user-select: none;
+    }
+
+    .toBottom {
+      margin-top: 15px;
+
+    }
+
+    .arrow {
+      width: 20px;
+      height: 20px;
+      vertical-align: middle;
+    }
+  </style>
+  <script src="./assets/jquery.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="top">
+      <div class="txt">
+        <span>白名单域名提交工具</span>
+      </div>
+      <div class="form">
+        <div class="input-box search-box" id="searchBox">
+          <img src="./assets/search.png" alt="" srcset="" class="serach-icon">
+          <input class="input" type="text" autocomplete="on" id="checkUrlInput" onkeydown="inputUrlEnter()" placeholder="请输入域名并回车"></input>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-list">
+      <p>白名单域名提交工具,github地址:</p>
+      <p>此域名仅用来收集网友提交的CN域名,并每日更新github的whitelist.txt文件,不对列表的使用做限制</p>
+      <p>使用方式:输入域名并回车即可</p>
+      <p>----------------------------------------------------------------</p>
+
+    </div>
+  </div>
+  <script>
+    var baseUrl = 'https://whitedomain.zwc365.com'
+    let checkUrlInput = document.querySelector('#checkUrlInput')
+    let domainInfoList = document.querySelector('.info-list')
+
+    function inputUrlEnter(){
+        if(event.keyCode == 13){
+            event.preventDefault();
+            let domain = checkUrlInput.value
+            checkDomain(domain)
+            console.log("check domain:" + domain)
+        }
+    }
+
+    function checkDomain(domain){
+        addItemToList(domain + ': ' + '正在提交域名,请稍后......')
+        $.ajax({
+            url: `${baseUrl}/api/checkhostname?checkhost=${domain}`,
+            success: function(res){
+                console.log(res.msg)
+                addItemToList(domain + ': ' + '成功获取服务器返回状态')
+                addItemToList(domain + ': ' + res.msg)
+            },
+            error: (e) => {
+                addItemToList(domain + ': ' + '提交域名失败,网络不可用或未知错误')
+            }
+        })
+    }
+
+    function addItemToList(msg){
+        let scrollBottom = isBottom()
+        let p = document.createElement('p')
+        p.innerHTML = msg
+        p.style.wordWrap = "break-word"
+        domainInfoList.appendChild(p)
+        $(p).hide();
+        $(p).fadeTo(1000, .9);
+        maxLogCount = 5000
+        if (judgePhone()){
+            maxLogCount = 1000
+        }
+        while (domainInfoList.children.length >= maxLogCount) {
+            domainInfoList.firstChild.remove()
+        }
+        if(scrollBottom){
+            scrollToBottom()
+        }
+    }
+
+    // 一直在停留底部
+    function scrollToBottom() {
+      if ($('body').height() > $(window).height()) {
+        // 页面超出
+        document.body.scrollTop = document.documentElement.scrollTop = $('body').height() - $(window).height()
+      }
+    }
+    function isBottom() {
+      let scrollTop = document.body.scrollTop || document.documentElement.scrollTop
+      return (window.innerHeight + scrollTop +10 >= $('body').height())
+    }
+    function judgePhone() {
+      let ua = navigator.userAgent.toLocaleLowerCase();
+      if (/android|ios|webos|iphone|blackberry/i.test(ua) ||
+            ua == 'salehouse-webview') {
+          return true;
+      } else return false;
+    }
+
+  </script>
+</body>
+</html>
+
