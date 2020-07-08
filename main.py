@@ -1,6 +1,7 @@
 import datetime
 import os
 import sched
+import threading
 import time
 
 from flask import Flask, request, jsonify, make_response
@@ -70,17 +71,30 @@ def schedulerTaskRun():
 def addFuncToScheduler():
     now = datetime.datetime.now()
     sched_time = now.replace(hour=autoRunScriptHour, minute=0)
-    if sched_time.timestamp() <= now.timestamp():
-        sched_time = sched_time.replace(day=sched_time.day + 1)
-    log('success add job to scheduler,month:{} ,day:{} ,hour:{} ,minute:{}'.format(
-        sched_time.month, sched_time.day, sched_time.hour, sched_time.minute))
-    scheduler.enterabs(sched_time.timestamp(), 0, schedulerTaskRun)
+
+    delay_time = 60 * 60 * 24 - (now.timestamp() - sched_time.timestamp()) \
+        if now.timestamp() >= sched_time.timestamp() else delay_time = sched_time.timestamp() - now.timestamp()
+
+    # 不使用下方定时的方式，而是使用延迟的方式
+    # 使用定时方式需要注意设定日期，年份等，而延迟 则相对简单不易错
+    # if sched_time.timestamp() <= now.timestamp():
+    #     sched_time = sched_time.replace(day=sched_time.day + 1)
+    # log('success add job to scheduler,month:{} ,day:{} ,hour:{} ,minute:{}'.format(
+    #     sched_time.month, sched_time.day, sched_time.hour, sched_time.minute))
+    # scheduler.enterabs(sched_time.timestamp(), 0, schedulerTaskRun)
+    scheduler.enter(delay_time, 0, schedulerTaskRun)
 
 
 def runScheduler():
+    """
+    定时任务，任务在子线程中运行
+    需要调用 run 才会执行
+    :return:
+    """
     global scheduler
     scheduler = sched.scheduler(time.time, time.sleep)
     addFuncToScheduler()
+    scheduler.run()
 
 
 def runGitCommit():
@@ -96,5 +110,6 @@ def runGitCommit():
 if __name__ == '__main__':
     log('run china host list server')
     host_utils.initDb()
-    runScheduler()
-    app.run(debug=False, host="0.0.0.0", port=8120)
+    scheduler_thread = threading.Thread(target=runScheduler, daemon=True)
+    scheduler_thread.start()
+    app.run(debug=True, host="0.0.0.0", port=8120)
