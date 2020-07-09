@@ -1,10 +1,12 @@
 import os
 import shutil
 import socket
+import time
 
 import redis
 import requests
-import time
+
+from ip2region_lib.ip2Region import Ip2Region
 from utils import log
 
 _pool = redis.ConnectionPool(host='127.0.0.1', port=8888, decode_responses=True)
@@ -47,8 +49,12 @@ def ischina(ip):
     """
     if is_test:
         return True
-    ip_exists, hash_name, hash_key = _checkDbExistsIp(ip, city="CN")
-    return ip_exists
+    if searcher.isip(ip):
+        data = searcher.btreeSearch(ip)
+        ip_info = data["region"].decode('utf-8').split('|')
+        return ip_info[0] == "中国"
+    else:
+        return False
 
 
 def checkHost(_hostname):
@@ -190,33 +196,9 @@ def _updateAllIpList():
                 clearCityList[ipinfo[1].upper()] = 1
                 hash_name_key = white_ip_hashname_format.format(ipinfo[1].upper())
                 _deleteAllHash(hash_name_key)
-            _addIpToRedis(ipinfo[3], ipinfo[1].upper())
             if is_test:
                 return
     print("刷新本地数据库成功")
-
-
-def _addIpToRedis(ip, city):
-    """
-    添加一个ip到数据库中
-    :param city:
-    :param ip:
-    :return:
-    """
-    ip_exists, hash_name, hash_key = _checkDbExistsIp(ip, city=city)
-    if not ip_exists:
-        if hash_key is None or hash_key == "":
-            print("ip check faild:{}".format(ip))
-            return
-        if len(hash_key) > redis_hash_key_max_length:
-            print("hash_key length out")
-            return
-        if is_test:
-            print('add to redis db:{}'.format(hash_key))
-        else:
-            redis_db.hset(hash_name, hash_key, city)
-    else:
-        print("redis db exists ip:{}, hash_key:{}".format(ip, hash_key))
 
 
 def _deleteAllHash(hashname):
@@ -280,29 +262,6 @@ def _checkDomainExistsByKey(domain_key, regex=False):
     return False
 
 
-def _checkDbExistsIp(ip, city='CN'):
-    """
-    检测 ip 是否已经存在于数据库中
-    :param ip:
-    :param city:
-    :return:
-    """
-    ip_exists = False
-    hash_name_key = white_ip_hashname_format.format(city)
-    ip_key = ""
-    for index in range(1, max_ip_length + 1):
-        ip_key, max_ip_index = _fromIpGetKey(str(ip), index)
-        if ip_key is None or ip_key == "":
-            continue
-        db_ip_info = "" if is_test else redis_db.hget(hash_name_key, ip_key)
-        if db_ip_info is None or db_ip_info == "":
-            if max_ip_index is not None and max_ip_index <= index:
-                break
-            continue
-        ip_exists = True
-    return ip_exists, hash_name_key, ip_key
-
-
 def _fromDomainGetKey(domain, child=-1):
     result_str = ""
     split_size = -1
@@ -328,46 +287,6 @@ def _fromDomainGetKey(domain, child=-1):
         else:
             result_str = "{}.{}".format(domain_split_l[index], result_str)
     return result_str, split_size
-
-
-def _fromIpGetKey(ip, child=1):
-    result_str = ""
-    max_index = max_ip_length
-    if ip is None or ip == "":
-        return result_str, max_index
-
-    if ip.find('.') != -1:
-        ip_split_l = ip.split('.')
-    elif ip.find(':') != -1:
-        ip_split_l = ip.split(':')
-    else:
-        return result_str, max_index
-    # 倒序检测ip
-    # 如果输入 1.0.1.0
-    # 输出 1_0_1 的 key
-    # 如果是 192.168.0.0
-    # 输出 192_168 的 key
-    for last_index in range(max_ip_length, 0, -1):
-        if last_index - 1 >= len(ip_split_l):
-            continue
-        if ip_split_l[last_index - 1] is not None and ip_split_l[last_index - 1] != "":
-            try:
-                if int(ip_split_l[last_index - 1]) == 0:
-                    continue
-            except ValueError:
-                pass
-            max_index = last_index
-            break
-    for index in range(child):
-        if index >= len(ip_split_l):
-            continue
-        if index >= max_index:
-            continue
-        if result_str == "":
-            result_str = ip_split_l[index]
-        else:
-            result_str = "{}_{}".format(result_str, ip_split_l[index])
-    return result_str, max_index
 
 
 def initDb():
@@ -413,11 +332,12 @@ def initDb():
 
 if is_test:
     # updateAllIpList()
-    _addIpToRedis("2001:df1:9f00::", "CN")
     checkHost('*.www.baidu.com')
     # result = _fromDomainGetKey('www.baidu.com', 2)
     # print(result)
     # _checkDbExistsDomain('*.www.baidu.com')
+
+searcher = Ip2Region('./ip2region_lib/ip2region.db')
 
 if __name__ == '__main__':
     initDb()
