@@ -230,10 +230,11 @@ def _checkDbExistsDomain(domain):
     domain_key = ""
 
     domain_key_tmp, max_length = _fromDomainGetKey(domain, child=-1)
+    domain_exists = _checkDomainExistsByKey(domain_key_tmp)
+    if domain_exists:
+        domain_key = domain_key_tmp
     if max_length <= 2:
-        domain_exists = _checkDomainExistsByKey(domain_key_tmp)
-        if domain_exists:
-            domain_key = domain_key_tmp
+        return domain_exists, domain_key
     for index in range(2, max_length + 1):
         domain_key_tmp, max_length = _fromDomainGetKey(domain, child=index)
         domain_exists = _checkDomainExistsByKey(domain_key_tmp, regex=True)
@@ -255,7 +256,7 @@ def _checkDomainExistsByKey(domain_key, regex=False):
             return True
         if domain_key.startswith("*."):
             return False
-    if domain_key is not None and domain_key != "":
+    elif domain_key is not None and domain_key != "":
         db_host_ip = "" if is_test else redis_db.hget(white_host_hashname, domain_key)
         if db_host_ip is not None and str(db_host_ip) != "":
             return True
