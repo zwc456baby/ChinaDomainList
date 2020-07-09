@@ -233,9 +233,10 @@ def _checkDbExistsDomain(domain):
     domain_exists = _checkDomainExistsByKey(domain_key_tmp)
     if domain_exists:
         domain_key = domain_key_tmp
+        return domain_exists, domain_key
     if max_length <= 2:
         return domain_exists, domain_key
-    for index in range(2, max_length + 1):
+    for index in range(2, max_length):
         domain_key_tmp, max_length = _fromDomainGetKey(domain, child=index)
         domain_exists = _checkDomainExistsByKey(domain_key_tmp, regex=True)
         if domain_exists:
