@@ -15,6 +15,7 @@
 
 ! 以下为所有网友自行提交的网址
 *.cip.cc
+*.qq.com
 0-6.com
 0033.com
 005.tv
@@ -983,6 +984,7 @@ btsteel.com
 btvu.org
 bubuzheng.com
 bufan.com
+bugly.qq.com
 buildhr.com
 buildjob.net
 bundpic.com
@@ -1056,6 +1058,7 @@ ccplay.cc
 cctcct.com
 cctiedu.com
 cctime.com
+cctv.cn
 cctv.com
 cctvpic.com
 ccutu.com
@@ -2954,6 +2957,7 @@ mafengwo.net
 magedu.com
 maigoo.com
 maijx.com
+mail.qq.com
 mainone.com
 makepolo.com
 makepolo.net
@@ -3696,6 +3700,7 @@ shyywz.com
 sichuanrc.com
 siilu.com
 siliaojixie.com
+sina.cn
 sina.net
 sinahk.net
 sinaimg.cn
@@ -4307,6 +4312,7 @@ wutongzi.com
 wuxirc.com
 www.baidu.com
 www.bilibili.com
+www.sina.com
 www.zhihu.com
 wxb.com
 wxhouse.com
