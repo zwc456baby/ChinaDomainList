@@ -2,10 +2,10 @@
 # CN 域名白名单列表
 
 目前github上已有许多同类仓库，例如 gfw whiteList,
-但是很多库长久不更新，或者更新不及时，要么作者已经放弃了
+但是一些库的更新不够及时
 此库最大的不同在于
 
-**白名单列表可由所有人进行维护**
+**白名单列表可由所有人进行维护，且每日更新**
 
 ---
 
@@ -25,10 +25,6 @@ CN 白名单域名列表：
 域名提交例子： `example.com` , `*.example.com`
 
 目前仅支持通配符提交
-
-### 已知问题
-
-由于IP归属地列表从单个机构抓取，故数据不够完善，目前识别失败率很高，需要增加更多机构数据
 
 
 ## 使用方式
@@ -64,4 +60,6 @@ CN 白名单域名列表：
 IP归属地抓取链接：
 `http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest`
 
+ip归属地本地识别数据库：
+[ip2region](https://github.com/lionsoul2014/ip2region)
 
