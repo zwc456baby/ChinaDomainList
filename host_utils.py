@@ -72,9 +72,9 @@ def checkHost(_hostname):
     """
     hostname = _hostname.strip('\n')
     parse_domain = urlparse(hostname)
-    hostname = parse_domain.get('netloc')
+    hostname = parse_domain.netloc
     if hostname is None or hostname == "":
-        hostname = parse_domain.get('path')
+        hostname = parse_domain.path
     if len(hostname) > redis_hash_key_max_length:
         return 1004
     host_ip = getip(hostname)
