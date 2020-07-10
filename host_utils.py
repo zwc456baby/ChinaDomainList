@@ -186,7 +186,7 @@ def _getDomainLineByKey(domain_key):
     except Exception:
         pass
     if result_str is None or result_str == "":
-        result_str = '{}\n'.format(domain_key if domain_key.startswith("*.") else domain_key)
+        result_str = '{}\n'.format(domain_key.lstrip("*.") if domain_key.startswith("*.") else domain_key)
     return result_str
 
 
