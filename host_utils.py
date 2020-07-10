@@ -8,6 +8,7 @@ import requests
 
 from ip2region_lib.ip2Region import Ip2Region
 from utils import log
+from urllib.parse import urlparse
 
 _pool = redis.ConnectionPool(host='127.0.0.1', port=8888, decode_responses=True)
 redis_db = redis.Redis(connection_pool=_pool)
@@ -70,16 +71,10 @@ def checkHost(_hostname):
     :return:
     """
     hostname = _hostname.strip('\n')
-    if hostname.startswith('http://'):
-        hostname = hostname.lstrip("http://")
-    if hostname.startswith('https://'):
-        hostname = hostname.lstrip("https://")
-    # if hostname.startswith('*'):
-    #     hostname = hostname.lstrip('*')
-    # if hostname.startswith('.'):
-    #     hostname = hostname.lstrip('.')
-    if len(hostname.split('/')) > 1:
-        hostname = hostname.split('/')[0]
+    parse_domain = urlparse(hostname)
+    hostname = parse_domain.get('netloc')
+    if hostname is None or hostname == "":
+        hostname = parse_domain.get('path')
     if len(hostname) > redis_hash_key_max_length:
         return 1004
     host_ip = getip(hostname)
