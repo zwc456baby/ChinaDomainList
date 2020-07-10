@@ -22,9 +22,24 @@ CN 白名单域名列表：
 程序每日亦会遍历数据库，对其中保存的域名进行有效查询，
 如果发现域名所对应的IP已经指向国外IP，则会从白名单中移除
 
-域名提交例子： `example.com` , `*.example.com`
+## 域名提交例子： 
 
-目前仅支持通配符提交
+- 提交： example.com
+
+将会生成一行 : `example.com`  规则
+
+- 提交： http://example.com
+
+将会生成一行: `||example.com` 规则
+
+- 提交： http**s**://example.com
+
+将会生成一行： `|example.com` 规则
+
+提交的 `http://` 和 `https://` 可以共存，能够同时生成 `|example.com` 和 `||example.com`,
+但是会覆盖掉 `example.com`
+
+建议提交时，直接复制粘贴 `url` ，并按回车即可
 
 
 ## 使用方式

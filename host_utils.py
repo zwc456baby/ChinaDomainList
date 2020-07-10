@@ -93,8 +93,8 @@ def checkHost(_hostname):
             log('success add host:{} ,scheme:{} ,ip:{} to redis db'.format(hostname, parse_domain.scheme, host_ip))
         return 1000
     else:
-        db_host_ip = "" if is_test else redis_db.hget(white_host_hashname, hostname)
-        if db_host_ip is not None and str(db_host_ip) != "":
+        db_host_info = "" if is_test else redis_db.hget(white_host_hashname, hostname)
+        if db_host_info is not None and str(db_host_info) != "":
             _tryDeleteDomain(hostname)
         return 1003
 
