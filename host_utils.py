@@ -1,14 +1,15 @@
+import json
 import os
 import shutil
 import socket
 import time
+from urllib.parse import urlparse
 
 import redis
 import requests
 
 from ip2region_lib.ip2Region import Ip2Region
 from utils import log
-from urllib.parse import urlparse
 
 _pool = redis.ConnectionPool(host='127.0.0.1', port=8888, decode_responses=True)
 redis_db = redis.Redis(connection_pool=_pool)
@@ -82,15 +83,14 @@ def checkHost(_hostname):
     if host_ip is None or host_ip == "":
         return 1002
     if ischina(host_ip):
-        is_exists, domain_key = _checkDbExistsDomain(hostname)
-        if is_exists:
+        is_exists, updata_db, domain_key = _checkOrSetDomain(hostname, host_ip, parse_domain.scheme)
+        if is_exists and not updata_db:
             print('exists domain:{}'.format(domain_key))
             return 1001
         if is_test:
             print("add hostname:{} ,ip:{} to hash".format(hostname, host_ip))
         else:
-            redis_db.hset(white_host_hashname, hostname, host_ip)
-            log('success add host:{} ,ip:{} to redis db'.format(hostname, host_ip))
+            log('success add host:{} ,scheme:{} ,ip:{} to redis db'.format(hostname, parse_domain.scheme, host_ip))
         return 1000
     else:
         db_host_ip = "" if is_test else redis_db.hget(white_host_hashname, hostname)
@@ -122,7 +122,8 @@ def checkAllHostIp():
             # 而目前最新的解析显示ip位于国外，则移除这个域名
             _tryDeleteDomain(hostname)
         else:
-            redis_db.hset(white_host_hashname, hostname, host_ip)
+            _checkOrSetDomain(hostname, host_ip)
+            # redis_db.hset(white_host_hashname, hostname, host_ip)
 
 
 def _tryDeleteDomain(domain):
@@ -163,8 +164,30 @@ def getHostnameToFile():
         shutil.copyfile(ext_filename, filename)
     with open(filename, mode='a+', encoding="UTF-8") as file:
         for k in redis_db.hkeys(white_host_hashname):
-            file.write("{}\n".format(k))
+            file.write(_getDomainLineByKey(k))
         file.flush()
+
+
+def _getDomainLineByKey(domain_key):
+    """
+    通过 key ，获取保存的信息，并构建一行规则
+    :param domain_key:
+    :return:
+    """
+    result_str = ""
+    domain_info_str = "" if is_test else redis_db.hget(white_host_hashname, domain_key)
+    try:
+        domain_info = json.loads(domain_info_str, encoding='utf-8')
+        if domain_info['ishttps']:
+            result_str = '|https://{}\n'.format(domain_key)
+        if domain_info['ishttp']:
+            result_str = '{}||{}\n'.format(result_str,
+                                           domain_key.lstrip("*") if domain_key.startswith("*") else domain_key)
+    except Exception:
+        pass
+    if result_str is None or result_str == "":
+        result_str = '{}\n'.format(domain_key)
+    return result_str
 
 
 def _updateAllIpList():
@@ -214,7 +237,7 @@ def _deleteAllHash(hashname):
     redis_db.delete(hashname)
 
 
-def _checkDbExistsDomain(domain):
+def _checkOrSetDomain(domain, hostip, scheme=''):
     """
     检测 域名是否已经存在数据库中，包括使用 *. 进行的匹配域名
     实际上这里应该扩展为正则匹配，但是目前只能使用 一个通配符
@@ -223,21 +246,42 @@ def _checkDbExistsDomain(domain):
     """
     domain_exists = False
     domain_key = ""
-
+    def_domain_info = {
+        'hostip': hostip,
+        'ishttp': False,
+        'ishttps': False
+    }
     domain_key_tmp, max_length = _fromDomainGetKey(domain, child=-1)
-    domain_exists = _checkDomainExistsByKey(domain_key_tmp)
+    domain_exists, domain_info_str = _checkDomainExistsByKey(domain_key_tmp)
+
+    if (not domain_exists) and max_length > 2:
+        for index in range(2, max_length):
+            domain_key_tmp, max_length = _fromDomainGetKey(domain, child=index)
+            domain_exists, domain_info_str = _checkDomainExistsByKey(domain_key_tmp, regex=True)
+            if domain_exists:
+                break
     if domain_exists:
         domain_key = domain_key_tmp
-        return domain_exists, domain_key
-    if max_length <= 2:
-        return domain_exists, domain_key
-    for index in range(2, max_length):
-        domain_key_tmp, max_length = _fromDomainGetKey(domain, child=index)
-        domain_exists = _checkDomainExistsByKey(domain_key_tmp, regex=True)
-        if domain_exists:
-            domain_key = domain_key_tmp
-            break
-    return domain_exists, domain_key
+        try:
+            domain_info = json.loads(domain_info_str, encoding='utf-8')
+        except Exception:
+            domain_info = def_domain_info
+    else:
+        domain_info = def_domain_info
+    need_set_db = not domain_exists
+    if scheme == 'http' and not domain_info['ishttp']:
+        domain_info['ishttp'] = True
+        need_set_db = True
+    elif scheme == 'https' and not domain_info['ishttps']:
+        domain_info['ishttps'] = True
+        need_set_db = True
+    if hostip != domain_info['hostip']:
+        domain_info['hostip'] = hostip
+        need_set_db = True
+    if need_set_db:
+        redis_db.hset(white_host_hashname, domain, json.dumps(domain_info, ensure_ascii=False))
+
+    return domain_exists, need_set_db, domain_key
 
 
 def _checkDomainExistsByKey(domain_key, regex=False):
@@ -247,16 +291,16 @@ def _checkDomainExistsByKey(domain_key, regex=False):
             new_key = "*.{}".format(domain_key[split_start + 1:len(domain_key)])
         else:
             new_key = "*.{}".format(domain_key)
-        db_host_ip = "" if is_test else redis_db.hget(white_host_hashname, new_key)
-        if db_host_ip is not None and str(db_host_ip) != "":
-            return True
+        db_host_info = "" if is_test else redis_db.hget(white_host_hashname, new_key)
+        if db_host_info is not None and str(db_host_info) != "":
+            return True, db_host_info
         if domain_key.startswith("*."):
-            return False
+            return False, ''
     elif domain_key is not None and domain_key != "":
-        db_host_ip = "" if is_test else redis_db.hget(white_host_hashname, domain_key)
-        if db_host_ip is not None and str(db_host_ip) != "":
-            return True
-    return False
+        db_host_info = "" if is_test else redis_db.hget(white_host_hashname, domain_key)
+        if db_host_info is not None and str(db_host_info) != "":
+            return True, db_host_info
+    return False, ""
 
 
 def _fromDomainGetKey(domain, child=-1):
