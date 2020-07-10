@@ -79,7 +79,7 @@ def checkHost(_hostname):
     if len(hostname) > redis_hash_key_max_length:
         return 1004
     host_ip = getip(hostname)
-    print('input host:{} ,ip:{}'.format(hostname, host_ip))
+    print('input host:{} ,scheme:{} ,ip:{}'.format(hostname, parse_domain.scheme, host_ip))
     if host_ip is None or host_ip == "":
         return 1002
     if ischina(host_ip):
@@ -182,11 +182,11 @@ def _getDomainLineByKey(domain_key):
             result_str = '|https://{}\n'.format(domain_key)
         if domain_info['ishttp']:
             result_str = '{}||{}\n'.format(result_str,
-                                           domain_key.lstrip("*") if domain_key.startswith("*") else domain_key)
+                                           domain_key.lstrip("*.") if domain_key.startswith("*.") else domain_key)
     except Exception:
         pass
     if result_str is None or result_str == "":
-        result_str = '{}\n'.format(domain_key)
+        result_str = '{}\n'.format(domain_key if domain_key.startswith("*.") else domain_key)
     return result_str
 
 
