@@ -62,8 +62,9 @@ def schedulerTaskRun():
         host_utils.checkAllHostIp()
         host_utils.getHostnameToFile()
         log('success write china host list to file')
-    except Exception:
-        log('run scheduler job exception,please check', filename="china_host_list_server_error")
+    except Exception as e:
+        log('run scheduler job exception,please check:{}'.format(e),
+                filename="china_host_list_server_error")
     runGitCommit()
     log('success commit to github')
 
