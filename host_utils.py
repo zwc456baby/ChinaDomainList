@@ -195,7 +195,11 @@ def _updateAllIpList():
     从 ip 管理局更新 国内 ip 列表
     :return:
     """
-    iplist_response = requests.get("http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest")
+    try:
+        iplist_response = requests.get("http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest")
+    except Exception as e:
+        log("request apnic iplist faild:{}".format(e), filename="china_host_list_server_error")
+        return
     print(iplist_response.status_code)
     if iplist_response.status_code != 200:
         print('get all iplist faild:{}'.format(iplist_response.status_code))
