@@ -76,6 +76,8 @@ def addFuncToScheduler():
     delay_time = 60 * 60 * 24 - (now.timestamp() - sched_time.timestamp())
     if now.timestamp() < sched_time.timestamp():
         delay_time = sched_time.timestamp() - now.timestamp()
+    if delay_time <= 0:
+        delay_time = 60 * 60 * 24
 
     # 不使用下方定时的方式，而是使用延迟的方式
     # 使用定时方式需要注意设定日期，年份等，而延迟 则相对简单不易错
